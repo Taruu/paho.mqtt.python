@@ -1192,8 +1192,8 @@ Publish a single message to a broker, then disconnect cleanly.
 .. code:: python
 
     single(topic, payload=None, qos=0, retain=False, hostname="localhost",
-        port=1883, client_id="", keepalive=60, will=None, auth=None, tls=None,
-        protocol=mqtt.MQTTv311, transport="tcp")
+        port=1883, properties=None, client_id="", keepalive=60, will=None,
+        auth=None, tls=None, protocol=mqtt.MQTTv311, transport="tcp")
 
 
 Publish Single Function arguments
@@ -1219,6 +1219,10 @@ hostname
 
 port
     the port to connect to the broker on. Defaults to 1883.
+
+properties
+    a dict or Properties class.
+    can be presented like dict with allowed Properties values.
 
 client_id
     the MQTT client id to use. If "" or None, the Paho library will

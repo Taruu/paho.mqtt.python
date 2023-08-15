@@ -29,24 +29,48 @@ except ImportError:
 
 from .. import mqtt
 from . import client as paho
+from .packettypes import PacketTypes
+from .properties import Properties
+
+
+def _do_properties(message):
+    temp_properties_dict = None
+    if isinstance(message, dict):
+        temp_properties_dict = message.get('properties')
+
+    elif isinstance(message, (tuple, list)):
+        if len(message) == 5:
+            temp_properties_dict = message[-1]
+    else:
+        raise TypeError('message must be a dict, tuple, or list')
+
+    if not (isinstance(temp_properties_dict, (dict, Properties, NoneType))):
+        raise TypeError('properties must be a dict')
+
+    if isinstance(temp_properties_dict, dict):
+        # _send_publish use PUBLISH value
+        temp_properties = Properties(PacketTypes.PUBLISH)
+        for key, value in temp_properties_dict.items():
+            temp_properties.__setattr__(key, value)
+        message.update({'properties': temp_properties})
+    return message
 
 
 def _do_publish(client):
     """Internal function"""
-
     message = client._userdata.popleft()
+
+    _do_properties(message)
 
     if isinstance(message, dict):
         client.publish(**message)
     elif isinstance(message, (tuple, list)):
         client.publish(*message)
-    else:
-        raise TypeError('message must be a dict, tuple, or list')
 
 
 def _on_connect(client, userdata, flags, rc):
     """Internal callback"""
-    #pylint: disable=invalid-name, unused-argument
+    # pylint: disable=invalid-name, unused-argument
 
     if rc == 0:
         if len(userdata) > 0:
@@ -54,13 +78,15 @@ def _on_connect(client, userdata, flags, rc):
     else:
         raise mqtt.MQTTException(paho.connack_string(rc))
 
+
 def _on_connect_v5(client, userdata, flags, rc, properties):
     """Internal v5 callback"""
     _on_connect(client, userdata, flags, rc)
 
+
 def _on_publish(client, userdata, mid):
     """Internal callback"""
-    #pylint: disable=unused-argument
+    # pylint: disable=unused-argument
 
     if len(userdata) == 0:
         client.disconnect()
@@ -84,15 +110,16 @@ def multiple(msgs, hostname="localhost", port=1883, client_id="", keepalive=60,
            used for any missing arguments. The dict must be of the form:
 
            msg = {'topic':"<topic>", 'payload':"<payload>", 'qos':<qos>,
-           'retain':<retain>}
+           'retain':<retain>, 'properties' : <properties> }
            topic must be present and may not be empty.
            If payload is "", None or not present then a zero length payload
            will be published.
            If qos is not present, the default of 0 is used.
            If retain is not present, the default of False is used.
+           Properties not necessary. Can be a dict or Properties class
 
            If a tuple, then it must be of the form:
-           ("<topic>", "<payload>", qos, retain)
+           ("<topic>", "<payload>", qos, retain, properties)
 
     hostname : a string containing the address of the broker to connect to.
                Defaults to localhost.
@@ -106,10 +133,12 @@ def multiple(msgs, hostname="localhost", port=1883, client_id="", keepalive=60,
                 seconds.
 
     will : a dict containing will parameters for the client: will = {'topic':
-           "<topic>", 'payload':"<payload">, 'qos':<qos>, 'retain':<retain>}.
+           "<topic>", 'payload':"<payload">, 'qos':<qos>, 'retain':<retain>,
+           'properties' : <properties>}.
            Topic is required, all other parameters are optional and will
            default to None, 0 and False respectively.
            Defaults to None, which indicates no will should be used.
+           Properties not necessary. Can be a dict or Properties class
 
     auth : a dict containing authentication parameters for the client:
            auth = {'username':"<username>", 'password':"<password>"}
@@ -136,7 +165,6 @@ def multiple(msgs, hostname="localhost", port=1883, client_id="", keepalive=60,
     if not isinstance(msgs, Iterable):
         raise TypeError('msgs must be an iterable')
 
-
     client = paho.Client(client_id=client_id, userdata=collections.deque(msgs),
                          protocol=protocol, transport=transport)
 
@@ -159,6 +187,7 @@ def multiple(msgs, hostname="localhost", port=1883, client_id="", keepalive=60,
                            "required for auth")
 
     if will is not None:
+        will = _do_properties(will)
         client.will_set(**will)
 
     if tls is not None:
@@ -178,7 +207,8 @@ def multiple(msgs, hostname="localhost", port=1883, client_id="", keepalive=60,
 
 
 def single(topic, payload=None, qos=0, retain=False, hostname="localhost",
-           port=1883, client_id="", keepalive=60, will=None, auth=None,
+           port=1883, properties=None, client_id="", keepalive=60, will=None,
+           auth=None,
            tls=None, protocol=paho.MQTTv311, transport="tcp", proxy_args=None):
     """Publish a single message to a broker, then disconnect cleanly.
 
@@ -201,6 +231,9 @@ def single(topic, payload=None, qos=0, retain=False, hostname="localhost",
 
     port : the port to connect to the broker on. Defaults to 1883.
 
+    properties : a dict or Properties class.
+                 can be presented like dict with allowed Properties values.
+
     client_id : the MQTT client id to use. If "" or None, the Paho library will
                 generate a client id automatically.
 
@@ -208,10 +241,12 @@ def single(topic, payload=None, qos=0, retain=False, hostname="localhost",
                 seconds.
 
     will : a dict containing will parameters for the client: will = {'topic':
-           "<topic>", 'payload':"<payload">, 'qos':<qos>, 'retain':<retain>}.
+           "<topic>", 'payload':"<payload">, 'qos':<qos>, 'retain':<retain>,
+           'properties' : <properties>}.
            Topic is required, all other parameters are optional and will
            default to None, 0 and False respectively.
            Defaults to None, which indicates no will should be used.
+           Properties not necessary. Can be a dict or Properties class
 
     auth : a dict containing authentication parameters for the client:
            auth = {'username':"<username>", 'password':"<password>"}
@@ -235,7 +270,8 @@ def single(topic, payload=None, qos=0, retain=False, hostname="localhost",
     proxy_args: a dictionary that will be given to the client.
     """
 
-    msg = {'topic':topic, 'payload':payload, 'qos':qos, 'retain':retain}
+    msg = {'topic': topic, 'payload': payload, 'qos': qos, 'retain': retain,
+           'properties': properties}
 
     multiple([msg], hostname, port, client_id, keepalive, will, auth, tls,
              protocol, transport, proxy_args)
