@@ -21,6 +21,7 @@ broker, then disconnect and nothing else is required.
 from __future__ import absolute_import
 
 import collections
+from types import NoneType
 
 try:
     from collections.abc import Iterable
@@ -46,7 +47,7 @@ def _do_properties(message):
         raise TypeError('message must be a dict, tuple, or list')
 
     if not (isinstance(temp_properties_dict, (dict, Properties, NoneType))):
-        raise TypeError('properties must be a dict')
+        raise TypeError('properties must be a dict or None')
 
     if isinstance(temp_properties_dict, dict):
         # _send_publish use PUBLISH value
@@ -188,7 +189,7 @@ def multiple(msgs, hostname="localhost", port=1883, client_id="", keepalive=60,
                            "required for auth")
 
     if will is not None:
-        will = _do_properties(will)
+        _do_properties(will)
         client.will_set(**will)
 
     if tls is not None:
