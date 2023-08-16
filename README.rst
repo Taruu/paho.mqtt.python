@@ -1234,7 +1234,7 @@ keepalive
 will
     a dict containing will parameters for the client:
 
-    will = {'topic': "<topic>", 'payload':"<payload">, 'qos':<qos>, 'retain':<retain>}.
+    will = {'topic': "<topic>", 'payload':"<payload">, 'qos':<qos>, 'retain':<retain>, 'properties' : <properties>}.
 
     Topic is required, all other parameters are optional and will default to
     None, 0 and False respectively.
@@ -1298,7 +1298,7 @@ msgs
     If a dict, only the topic must be present. Default values will be
     used for any missing arguments. The dict must be of the form:
 
-    msg = {'topic':"<topic>", 'payload':"<payload>", 'qos':<qos>, 'retain':<retain>}
+    msg = {'topic':"<topic>", 'payload':"<payload>", 'qos':<qos>, 'retain':<retain>, 'properties' : <properties>}
 
     topic must be present and may not be empty.
     If payload is "", None or not present then a zero length payload will be published. If qos is not present, the default of 0 is used. If retain is not present, the default of False is used.

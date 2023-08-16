@@ -34,6 +34,7 @@ from .properties import Properties
 
 
 def _do_properties(message):
+    """Make Properties form dict"""
     temp_properties_dict = None
     if isinstance(message, dict):
         temp_properties_dict = message.get('properties')
